@@ -12,4 +12,4 @@ $import->start();
 
 system_message(elgg_echo("transfer:import:done"));
 
-//exit();
+exit();

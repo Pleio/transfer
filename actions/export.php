@@ -17,3 +17,5 @@ foreach ($guids as $guid) {
 $export->finish();
 
 system_message(elgg_echo("transfer:export:done"));
+
+exit();

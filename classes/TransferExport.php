@@ -7,6 +7,9 @@ class TransferExport {
             mkdir($this->path, 0750, true);
         }
 
+        mkdir($this->path . "icons/", 0750, true);
+        mkdir($this->path . "files/", 0750, true);
+
         $this->user_guids = [];
         $this->group_guids = [];
     }
