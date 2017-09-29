@@ -1,0 +1,14 @@
+{
+    "name": "pleio/transfer",
+    "description": "A module to import and export data in a generic JSON format.",
+    "type": "elgg-plugin",
+    "keywords": ["elgg", "plugin", "transfer"],
+    "license": "EUPL-1.1",
+    "support": {
+        "source": "https://github.com/Pleio/transfer",
+        "issues": "https://github.com/Pleio/transfer/issues"
+    },
+    "require": {
+        "composer/installers": "^1.0.8"
+    }
+}
