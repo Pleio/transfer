@@ -188,6 +188,8 @@ class TransferImport {
     }
 
     function importComments($entity, $comments) {
+        $dbprefix = elgg_get_config("dbprefix");
+
         foreach ($comments as $comment) {
             if (!$this->translate_user_guids[$comment->owner_guid]) {
                 throw new Exception("Could not find the translation of owner_guid {$comment->owner_guid}.");
@@ -195,18 +197,16 @@ class TransferImport {
 
             if ($entity->getSubtype() == "groupforumtopic") {
                 $annotation_id = create_annotation($entity->guid, "group_topic_post", $comment->description, '', $this->translate_user_guids[$comment->owner_guid], $entity->access_id);
-
                 $annotation = elgg_get_annotation_from_id($annotation_id);
-                $annotation->time_created = $comment->time_created;
-                $annotation->time_updated = $comment->time_updated;
-                $annotation->save();
+
+                $time_created = (int) $comment->time_created;
+                update_data("UPDATE {$dbprefix}annotations SET time_created = {$time_created} WHERE id = {$annotation->id}");
             } else if ($entity->getSubtype() == "file") {
                 $annotation_id = create_annotation($entity->guid, "generic_comment", $comment->description, '', $this->translate_user_guids[$comment->owner_guid], $entity->access_id);
-
                 $annotation = elgg_get_annotation_from_id($annotation_id);
-                $annotation->time_created = $comment->time_created;
-                $annotation->time_updated = $comment->time_updated;
-                $annotation->save();
+
+                $time_created = (int) $comment->time_created;
+                update_data("UPDATE {$dbprefix}annotations SET time_created = {$time_created} WHERE id = {$annotation->id}");
             } else {
                 $object = new ElggObject();
 
