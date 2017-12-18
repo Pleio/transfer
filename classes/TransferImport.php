@@ -5,6 +5,7 @@ class TransferImport {
         $id = preg_replace('/[^0-9\-\._]/','', $id);
         $this->path = $this->generateImportPath($id);
 
+        $this->site_guids = [];
         $this->group_guids = [];
         $this->create_folder_relationships = [];
         $this->create_folder_parent_guids = [];
@@ -22,6 +23,8 @@ class TransferImport {
 
     function start() {
         $this->importUsers();
+
+        $this->importSites();
         $this->importGroups();
 
         foreach ($this->group_guids as $guid) {
@@ -55,9 +58,18 @@ class TransferImport {
         }
     }
 
+    function importSites() {
+        $site = elgg_get_site_entity();
+
+        foreach ($this->getData("sites.json") as $row) {
+            $this->translate_site_guids[$row->guid] = $site->guid;
+            $this->site_guids[] = $row->guid;
+        }
+    }
+
     function importGroups() {
         $fields = ["name", "description"];
-        
+
         foreach ($this->getData("groups.json") as $row) {
             $group = new ElggGroup();
 
@@ -166,7 +178,7 @@ class TransferImport {
         }
     }
 
-    function importFolderRelations() {       
+    function importFolderRelations() {
         foreach ($this->create_folder_relationships as $relationship) {
             if (!$this->translate_object_guids[$relationship[0]]) {
                 throw new Exception("Could not find the translation of parent_guid {$relationship[0]}");

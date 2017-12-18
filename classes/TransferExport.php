@@ -35,6 +35,20 @@ class TransferExport {
         $file->close();
     }
 
+    function addSite(ElggSite $site) {
+        $this->site_guids[] = $site->guid;
+
+        $file = new TransferFile($this, "content_{$site->guid}.json");
+
+        $rows = get_data("SELECT guid FROM elgg_entities WHERE container_guid = 0 AND site_guid = {$site->guid}");
+        foreach ($rows as $row) {
+            $entity = get_entity($row->guid);
+            $file->writeEntity($entity);
+        }
+
+        $file->close();
+    }
+
     function addUserGuid($user_guid) {
         if (!in_array($user_guid, $this->user_guids)) {
             $this->user_guids[] = $user_guid;
@@ -43,12 +57,15 @@ class TransferExport {
 
     function finish() {
         $file = new TransferFile($this, "groups.json");
-
         foreach ($this->group_guids as $guid) {
             $file->writeEntity(get_entity($guid));
         }
-
         $file->close();
+
+        $file = new TransferFile($this, "sites.json");
+        foreach ($this->site_guids as $guid) {
+            $file->writeEntity(get_entity($guid));
+        }
 
         $file = new TransferFile($this, "users.json");
 
