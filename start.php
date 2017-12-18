@@ -23,7 +23,7 @@ function transfer_get_exports() {
     $parameters = get_default_filestore()->getParameters();
 
     $path = "{$parameters['dir_root']}export/{$site->guid}/*";
-    
+
     $exports = [];
     foreach (glob($path, GLOB_ONLYDIR) as $dir) {
         $exports[] = basename($dir);
@@ -37,7 +37,7 @@ function transfer_get_imports() {
     $parameters = get_default_filestore()->getParameters();
 
     $path = "{$parameters['dir_root']}import/{$site->guid}/*";
-    
+
     $exports = [];
     foreach (glob($path, GLOB_ONLYDIR) as $dir) {
         $exports[] = basename($dir);

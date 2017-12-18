@@ -57,6 +57,11 @@ class TransferFile {
 
     public function writeObject($entity) {
         $fields = ["guid", "owner_guid", "container_guid", "type", "title", "description", "time_created", "time_updated", "tags"];
+
+        if (!$entity) {
+            return;
+        }
+
         $data = $this->getData($entity, $fields);
         $data["subtype"] = $entity->getSubtype();
 

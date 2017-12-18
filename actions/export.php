@@ -10,8 +10,17 @@ if (!$guids) {
 
 $export = new TransferExport();
 foreach ($guids as $guid) {
-    $group = get_entity($guid);
-    $export->addGroup($group);
+    $entity = get_entity($guid);
+
+    if (!$entity->canEdit()) {
+        continue;
+    }
+
+    if ($entity instanceof ElggGroup) {
+        $export->addGroup($entity);
+    } elseif ($entity instanceof ElggSite) {
+        $export->addSite($entity);
+    }
 }
 
 $export->finish();

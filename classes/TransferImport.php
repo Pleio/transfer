@@ -5,6 +5,7 @@ class TransferImport {
         $id = preg_replace('/[^0-9\-\._]/','', $id);
         $this->path = $this->generateImportPath($id);
 
+        $this->site_guids = [];
         $this->group_guids = [];
         $this->create_folder_relationships = [];
         $this->create_folder_parent_guids = [];
@@ -22,6 +23,8 @@ class TransferImport {
 
     function start() {
         $this->importUsers();
+
+        $this->importSites();
         $this->importGroups();
 
         foreach ($this->group_guids as $guid) {
@@ -55,9 +58,18 @@ class TransferImport {
         }
     }
 
+    function importSites() {
+        $site = elgg_get_site_entity();
+
+        foreach ($this->getData("sites.json") as $row) {
+            $this->translate_site_guids[$row->guid] = $site->guid;
+            $this->site_guids[] = $row->guid;
+        }
+    }
+
     function importGroups() {
         $fields = ["name", "description"];
-        
+
         foreach ($this->getData("groups.json") as $row) {
             $group = new ElggGroup();
 
@@ -168,7 +180,7 @@ class TransferImport {
         }
     }
 
-    function importFolderRelations() {       
+    function importFolderRelations() {
         foreach ($this->create_folder_relationships as $relationship) {
             if (!$this->translate_object_guids[$relationship[0]]) {
                 throw new Exception("Could not find the translation of parent_guid {$relationship[0]}");
@@ -190,6 +202,8 @@ class TransferImport {
     }
 
     function importComments($entity, $comments) {
+        $dbprefix = elgg_get_config("dbprefix");
+
         foreach ($comments as $comment) {
             if (!$this->translate_user_guids[$comment->owner_guid]) {
                 throw new Exception("Could not find the translation of owner_guid {$comment->owner_guid}.");
@@ -197,18 +211,16 @@ class TransferImport {
 
             if ($entity->getSubtype() == "groupforumtopic") {
                 $annotation_id = create_annotation($entity->guid, "group_topic_post", $comment->description, '', $this->translate_user_guids[$comment->owner_guid], $entity->access_id);
-
                 $annotation = elgg_get_annotation_from_id($annotation_id);
-                $annotation->time_created = $comment->time_created;
-                $annotation->time_updated = $comment->time_updated;
-                $annotation->save();
+
+                $time_created = (int) $comment->time_created;
+                update_data("UPDATE {$dbprefix}annotations SET time_created = {$time_created} WHERE id = {$annotation->id}");
             } else if ($entity->getSubtype() == "file") {
                 $annotation_id = create_annotation($entity->guid, "generic_comment", $comment->description, '', $this->translate_user_guids[$comment->owner_guid], $entity->access_id);
-
                 $annotation = elgg_get_annotation_from_id($annotation_id);
-                $annotation->time_created = $comment->time_created;
-                $annotation->time_updated = $comment->time_updated;
-                $annotation->save();
+
+                $time_created = (int) $comment->time_created;
+                update_data("UPDATE {$dbprefix}annotations SET time_created = {$time_created} WHERE id = {$annotation->id}");
             } else {
                 $object = new ElggObject();
 
