@@ -139,7 +139,7 @@ class TransferImport {
             $object->owner_guid = $this->translate_user_guids[$row->owner_guid];
             $object->container_guid = $this->translate_group_guids[$row->container_guid];
 
-            if (in_array($row->container_guid, "open_group_guids")) {
+            if (in_array($row->container_guid, $this->open_group_guids)) {
                 $object->access_id = get_default_access();
             } else {
                 $object->access_id = $this->translate_group_acls[$row->container_guid];
