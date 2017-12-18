@@ -76,6 +76,8 @@ class TransferImport {
 
             $group->time_created = $row->time_created;
             $group->time_updated = $row->time_updated;
+            $group->access_id = 2;
+
             $group->save();
 
             $this->copyIcons("groups", $row->guid, $group);
