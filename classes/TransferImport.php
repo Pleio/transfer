@@ -11,8 +11,11 @@ class TransferImport {
         $this->create_folder_parent_guids = [];
 
         $this->translate_user_guids = [];
-        $this->translate_group_guids = [];
         $this->translate_object_guids = [];
+
+        $this->translate_group_guids = [];
+        $this->translate_group_acls = [];
+        $this->open_group_guids = [];
     }
 
     private function generateImportPath($id) {
@@ -49,7 +52,7 @@ class TransferImport {
                 continue;
             }
 
-            $guid = register_user($row->username, generate_random_cleartext_password(), $row->name, $row->email);
+            $guid = register_user($this->generateUniqueUsername($row->username), generate_random_cleartext_password(), $row->name, $row->email);
             $this->translate_user_guids[$row->guid] = $guid;
 
             if (elgg_is_active_plugin("pleio") && $row->pleio_guid) {
@@ -92,6 +95,8 @@ class TransferImport {
 
             $group->save();
 
+            $acl = $group->group_acl;
+
             $this->copyIcons("groups", $row->guid, $group);
 
             foreach ($row->members as $member_guid) {
@@ -99,7 +104,13 @@ class TransferImport {
             }
 
             $this->translate_group_guids[$row->guid] = $guid;
+            $this->translate_group_acls[$row->guid] = $acl;
+
             $this->group_guids[] = $row->guid;
+
+            if ($row->is_open == 1) {
+                $this->open_group_guids[] = $row->guid;
+            }
         }
     }
 
@@ -122,11 +133,17 @@ class TransferImport {
             }
 
             if (!$this->translate_group_guids[$row->container_guid]) {
-                throw new Exception("Could not find the translation of container_guid {$row->container_guid}.");   
+                throw new Exception("Could not find the translation of container_guid {$row->container_guid}.");
             }
 
             $object->owner_guid = $this->translate_user_guids[$row->owner_guid];
             $object->container_guid = $this->translate_group_guids[$row->container_guid];
+
+            if (in_array($row->container_guid, "open_group_guids")) {
+                $object->access_id = get_default_access();
+            } else {
+                $object->access_id = $this->translate_group_acls[$row->container_guid];
+            }
 
             $guid = $object->save();
 
@@ -269,5 +286,32 @@ class TransferImport {
         }
 
         fclose($handle);
+    }
+
+    private function generateUniqueUsername($username) {
+        $username = preg_replace("/[^a-zA-Z0-9]+/", "", $username);
+
+        while (strlen($username) < 4) {
+            $username .= "0";
+        }
+
+        $hidden = access_get_show_hidden_status();
+        access_show_hidden_entities(true);
+
+        if (get_user_by_username($username)) {
+            $i = 1;
+
+            while (get_user_by_username($username . $i)) {
+                $i++;
+            }
+
+            $result = $username . $i;
+        } else {
+            $result = $username;
+        }
+
+        access_show_hidden_entities($hidden);
+
+        return $result;
     }
 }
