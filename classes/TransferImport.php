@@ -30,6 +30,10 @@ class TransferImport {
         $this->importSites();
         $this->importGroups();
 
+        foreach ($this->site_guids as $guid) {
+            $this->importContent($guid);
+        }
+
         foreach ($this->group_guids as $guid) {
             $this->importContent($guid);
         }
@@ -71,33 +75,40 @@ class TransferImport {
     }
 
     function importGroups() {
-        $fields = ["name", "description"];
+        $fields = ["name", "description", "tags"];
 
         foreach ($this->getData("groups.json") as $row) {
-            $group = new ElggGroup();
+            if ($row->existing_guid) {
+                $group = get_entity($row->existing_guid);
+                if (!$group) {
+                    throw new Exception("Could not find the existing_guid {$row->existing_guid}.");
+                }
+            } else {
+                $group = new ElggGroup();
 
-            foreach ($fields as $field) {
-                $group->$field = $row->$field;
+                foreach ($fields as $field) {
+                    $group->$field = $row->$field;
+                }
+
+                if (!$this->translate_user_guids[$row->owner_guid]) {
+                    throw new Exception("Could not find the translation of owner_guid {$row->owner_guid}.");
+                }
+
+                $group->owner_guid = $this->translate_user_guids[$row->owner_guid];
+                $group->membership = $row->is_open == 1 ? ACCESS_PUBLIC : ACCESS_PRIVATE;
+
+                $guid = $group->save();
+
+                $group->time_created = $row->time_created;
+                $group->time_updated = $row->time_updated;
+                $group->access_id = 2;
+
+                $group->save();
+
+                $this->copyIcons("groups", $row->guid, $group);
             }
-
-            if (!$this->translate_user_guids[$row->owner_guid]) {
-                throw new Exception("Could not find the translation of owner_guid {$row->owner_guid}.");
-            }
-
-            $group->owner_guid = $this->translate_user_guids[$row->owner_guid];
-            $group->membership = $row->is_open == 1 ? ACCESS_PUBLIC : ACCESS_PRIVATE;
-
-            $guid = $group->save();
-
-            $group->time_created = $row->time_created;
-            $group->time_updated = $row->time_updated;
-            $group->access_id = 2;
-
-            $group->save();
 
             $acl = $group->group_acl;
-
-            $this->copyIcons("groups", $row->guid, $group);
 
             foreach ($row->members as $member_guid) {
                 join_group($group->guid, $this->translate_user_guids[$member_guid]);
@@ -117,27 +128,27 @@ class TransferImport {
     function importContent($guid) {
         $fields = ["subtype", "title", "description", "tags"];
 
-        $guid = (int) $guid;
         foreach ($this->getData("content_{$guid}.json") as $row) {
             $object = new ElggObject();
             foreach ($fields as $field) {
                 $object->$field = $row->$field;
             }
 
-            if ($row->subtype == "discussion") {
-                $object->subtype = "groupforumtopic";
-            }
-
             if (!$this->translate_user_guids[$row->owner_guid]) {
-                throw new Exception("Could not find the translation of owner_guid {$row->owner_guid}.");
-            }
-
-            if (!$this->translate_group_guids[$row->container_guid]) {
-                throw new Exception("Could not find the translation of container_guid {$row->container_guid}.");
+                echo ("Could not find the translation of owner_guid {$row->owner_guid}, skipping {$row->guid}.") . PHP_EOL;
+                continue;
             }
 
             $object->owner_guid = $this->translate_user_guids[$row->owner_guid];
-            $object->container_guid = $this->translate_group_guids[$row->container_guid];
+
+            if ($row->container_guid) {
+                if (!$this->translate_group_guids[$row->container_guid]) {
+                    echo ("Could not find the translation of container_guid {$row->container_guid}.") . PHP_EOL;
+                    continue;
+                }
+
+                $object->container_guid = $this->translate_group_guids[$row->container_guid];
+            }
 
             if (in_array($row->container_guid, $this->open_group_guids)) {
                 $object->access_id = get_default_access();
@@ -188,6 +199,20 @@ class TransferImport {
                 case "blog":
                     $this->copyIcons("blogs", $row->guid, $object);
                     break;
+                case "event":
+                    $object->start_day = $row->start_day;
+                    $object->start_time = $row->start_time;
+                    $object->end_ts = $row->end_ts;
+                    $object->save();
+
+                    foreach ($row->attendees as $attendee) {
+                        if ($this->translate_user_guids[$attendee->user_guid]) {
+                            add_entity_relationship($object->guid, "event_{$attendee->status}", $this->translate_user_guids[$attendee->user_guid]);
+                        }
+                    }
+
+                    $this->importComments($object, $row->comments);
+                    break;
                 case "news":
                 case "question":
                 case "discussion":
@@ -223,7 +248,8 @@ class TransferImport {
 
         foreach ($comments as $comment) {
             if (!$this->translate_user_guids[$comment->owner_guid]) {
-                throw new Exception("Could not find the translation of owner_guid {$comment->owner_guid}.");
+                echo ("Could not find the translation of owner_guid {$comment->owner_guid}." . PHP_EOL);
+                continue;
             }
 
             if ($entity->getSubtype() == "groupforumtopic") {
