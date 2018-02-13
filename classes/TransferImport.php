@@ -78,12 +78,13 @@ class TransferImport {
         $fields = ["name", "description", "tags"];
 
         foreach ($this->getData("groups.json") as $row) {
+            $group = null;
+
             if ($row->existing_guid) {
                 $group = get_entity($row->existing_guid);
-                if (!$group) {
-                    throw new Exception("Could not find the existing_guid {$row->existing_guid}.");
-                }
-            } else {
+            }
+
+            if (!$group) {
                 $group = new ElggGroup();
 
                 foreach ($fields as $field) {
@@ -119,7 +120,7 @@ class TransferImport {
 
             $this->group_guids[] = $row->guid;
 
-            if ($row->is_open == 1) {
+            if ($group->membership === ACCESS_PUBLIC) {
                 $this->open_group_guids[] = $row->guid;
             }
         }
