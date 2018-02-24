@@ -281,6 +281,7 @@ class TransferImport {
 
                 $object->owner_guid = $this->translate_user_guids[$comment->owner_guid];
                 $object->container_guid = $entity->guid;
+                $object->access_id = $entity->access_id;
 
                 $guid = $object->save();
 
