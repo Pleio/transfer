@@ -214,8 +214,11 @@ class TransferImport {
 
                     $this->importComments($object, $row->comments);
                     break;
-                case "news":
                 case "question":
+                    $object->status = $row->status;
+                    $this->importComments($object, $row->comments);
+                    break;
+                case "news":
                 case "discussion":
                     $this->importComments($object, $row->comments);
                     break;
@@ -274,15 +277,20 @@ class TransferImport {
                     $object->subtype = "comment";
                 }
 
-                $object->description = $comment->description; 
+                $object->description = $comment->description;
 
                 $object->owner_guid = $this->translate_user_guids[$comment->owner_guid];
                 $object->container_guid = $entity->guid;
+
                 $guid = $object->save();
 
                 $object->time_created = $comment->time_created;
                 $object->time_updated = $comment->time_updated;
                 $object->save();
+
+                if ($comment->correct_answer) {
+                    add_entity_relationship($entity->guid, "correctAnswer", $object->guid);
+                }
             }
         }
     }

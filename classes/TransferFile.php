@@ -73,8 +73,11 @@ class TransferFile {
                 $data["subtype"] = "discussion";
                 $data["comments"] = $this->getComments($entity);
                 break;
-            case "news":
             case "question":
+                $data["status"] = $entity->status;
+                $data["comments"] = $this->getComments($entity);
+                break;
+            case "news":
             case "discussion":
                 $data["comments"] = $this->getComments($entity);
                 break;
@@ -180,10 +183,18 @@ class TransferFile {
 
             $results = get_data("SELECT guid FROM elgg_entities WHERE container_guid = {$entity->guid} AND subtype IN ({$subtypes})");
             foreach ($results as $result) {
-                $entity = get_entity($result->guid);
-                $comments[] = $this->getData($entity, $fields);
+                $comment_entity = get_entity($result->guid);
 
-                $this->export->addUserGuid($entity->owner_guid);
+                $comment = $this->getData($comment_entity, $fields);
+
+                if ($comment_entity->getSubtype() === "answer") {
+                    if (check_entity_relationship($entity->guid, "correctAnswer", $comment_entity->guid)) {
+                        $comment["correct_answer"] = true;
+                    }
+                }
+
+                $comments[] = $comment;
+                $this->export->addUserGuid($comment_entity->owner_guid);
             }
         }
 
