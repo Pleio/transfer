@@ -31,11 +31,11 @@ class TransferImport {
         $this->importGroups();
 
         foreach ($this->site_guids as $guid) {
-            $this->importContent($guid);
+            $this->importContent($guid, false);
         }
 
         foreach ($this->group_guids as $guid) {
-            $this->importContent($guid);
+            $this->importContent($guid, true);
         }
 
         $this->importFolderRelations();
@@ -126,10 +126,10 @@ class TransferImport {
         }
     }
 
-    function importContent($guid) {
+    function importContent($container_guid, $is_group) {
         $fields = ["subtype", "title", "description", "tags"];
 
-        foreach ($this->getData("content_{$guid}.json") as $row) {
+        foreach ($this->getData("content_{$container_guid}.json") as $row) {
             $object = new ElggObject();
             foreach ($fields as $field) {
                 $object->$field = $row->$field;
@@ -142,19 +142,22 @@ class TransferImport {
 
             $object->owner_guid = $this->translate_user_guids[$row->owner_guid];
 
-            if ($row->container_guid) {
-                if (!$this->translate_group_guids[$row->container_guid]) {
-                    echo ("Could not find the translation of container_guid {$row->container_guid}.") . PHP_EOL;
+
+            if ($is_group) {
+                if (!$this->translate_group_guids[$container_guid]) {
+                    echo ("Could not find the translation of container_guid {$container_guid}") . PHP_EOL;
                     continue;
                 }
 
-                $object->container_guid = $this->translate_group_guids[$row->container_guid];
-            }
+                $object->container_guid = $this->translate_group_guids[$container_guid];
 
-            if (in_array($row->container_guid, $this->open_group_guids)) {
-                $object->access_id = get_default_access();
+                if (in_array($container_guid, $this->open_group_guids)) {
+                    $object->access_id = get_default_access();
+                } else {
+                    $object->access_id = $this->translate_group_acls[$container_guid];
+                }
             } else {
-                $object->access_id = $this->translate_group_acls[$row->container_guid];
+                $object->access_id = get_default_access();
             }
 
             $guid = $object->save();
