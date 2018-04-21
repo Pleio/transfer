@@ -202,6 +202,7 @@ class TransferImport {
                     break;
                 case "blog":
                     $this->copyIcons("blogs", $row->guid, $object);
+                    $this->importComments($object, $row->comments);
                     break;
                 case "event":
                     $object->start_day = $row->start_day;
