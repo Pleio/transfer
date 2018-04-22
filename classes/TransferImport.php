@@ -12,8 +12,8 @@ class TransferImport {
 
         $this->translate_user_guids = [];
         $this->translate_object_guids = [];
-
         $this->translate_group_guids = [];
+
         $this->translate_group_acls = [];
         $this->open_group_guids = [];
     }
@@ -40,6 +40,8 @@ class TransferImport {
 
         $this->importFolderRelations();
         $this->importFolderParentGuids();
+
+        $this->writeImportMapping();
     }
 
     function importUsers() {
@@ -109,14 +111,12 @@ class TransferImport {
                 $this->copyIcons("groups", $row->guid, $group);
             }
 
-            $acl = $group->group_acl;
-
             foreach ($row->members as $member_guid) {
                 join_group($group->guid, $this->translate_user_guids[$member_guid]);
             }
 
-            $this->translate_group_guids[$row->guid] = $guid;
-            $this->translate_group_acls[$row->guid] = $acl;
+            $this->translate_group_guids[$row->guid] = $group->guid;
+            $this->translate_group_acls[$row->guid] = $group->group_acl;
 
             $this->group_guids[] = $row->guid;
 
@@ -316,6 +316,20 @@ class TransferImport {
             copy("{$this->path}/icons/{$old_guid}{$size}.jpg", $filehandler->getFilenameOnFilestore());
         }
 
+    }
+
+    private function writeImportMapping() {
+        $uuid = date("Ymd-His");
+
+        $data = json_encode([
+            "translate_user_guids" => $this->translate_user_guids,
+            "translate_object_guids" => $this->translate_object_guids,
+            "translate_group_guids" => $this->translate_group_guids
+        ]);
+
+        $fp = fopen("{$this->path}importlog_{$uuid}", "w");
+        fwrite($fp, $data);
+        fclose($fp);
     }
 
     private function getData($filename) {
