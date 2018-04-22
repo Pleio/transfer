@@ -58,7 +58,8 @@ class TransferImport {
                 continue;
             }
 
-            $guid = register_user($this->generateUniqueUsername($row->username), generate_random_cleartext_password(), $row->name, $row->email);
+            $guid = register_user($this->generateUniqueUsername($row->email), generate_random_cleartext_password(), $row->name, $row->email);
+            elgg_set_user_validation_status($guid, true, "email");
             $this->translate_user_guids[$row->guid] = $guid;
 
             if (elgg_is_active_plugin("pleio") && $row->pleio_guid) {
@@ -342,8 +343,9 @@ class TransferImport {
         fclose($handle);
     }
 
-    private function generateUniqueUsername($username) {
-        $username = preg_replace("/[^a-zA-Z0-9]+/", "", $username);
+    private function generateUniqueUsername($email) {
+        $parts = explode("@", $email);
+        $username = preg_replace("/[^a-zA-Z0-9]+/", "", $parts[0]);
 
         while (strlen($username) < 4) {
             $username .= "0";
