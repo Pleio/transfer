@@ -11,7 +11,9 @@ function transfer_init() {
 
 function transfer_get_groups() {
     $groups = [];
-    foreach (elgg_get_entities(["type" => "group", "limit" => 0]) as $group) {
+    $sql = "SELECT guid, name FROM elgg_groups_entity limit 10000";
+    $rows = get_data($sql);
+    foreach ($rows as $group) {
         $groups[$group->name] = $group->guid;
     }
 
